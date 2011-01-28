@@ -1,0 +1,17 @@
+name:		        GLX
+version:	        0.1.1
+license:	        BSD3
+license-file:	        LICENSE
+copyright:	        Aren Olson, 2011
+maintainer:	        Aren Olson <reacocard@gmail.com>
+homepage:               <insert github URL>
+category:	        Graphics
+synopsis:	        A binding to GLX
+exposed-modules:
+    Graphics.X11.GLX
+extensions:	        ForeignFunctionInterface, CPP
+extra-libraries:        "GL"
+build-depends:	        base >= 3 && < 5, X11, OpenGLRaw
+build-type:             Simple
+ghc-options:            -funbox-strict-fields -Wall -fno-warn-unused-binds
+ghc-prof-options:       -prof -auto-all
