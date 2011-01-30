@@ -303,16 +303,22 @@ foreign import ccall unsafe "glXGetCurrentDisplay"
 
 
 -- GLX 1.3 and later
-glXChooseFBConfig :: Display -> ScreenNumber -> [Attribute] -> IO (Maybe GLXFBConfig)
-glXChooseFBConfig dpy screen attrs = do
-    fbc@(GLXFBConfig fbcPtr) <- alloca $ \n -> 
-                                withAttrList attrs $ \attrlist -> 
-                                cglXChooseFBConfig dpy screen attrlist n
-    if fbcPtr == nullPtr
-        then return Nothing
-        else return (Just fbc)
+
+-- This is VERY MUCH WRONG - needs to return a list of GLXFBConfig to match the C api,
+-- but Storable is being bitchy...
+glXChooseFBConfig :: Display -> ScreenNumber -> [Attribute] -> IO [GLXFBConfig]
+glXChooseFBConfig dpy screen attrs =
+    alloca $ \n -> 
+        withAttrList attrs $ \attrlist -> do
+            fbcPtr <- cglXChooseFBConfig dpy screen attrlist n
+            n <- peek n
+            return $ map (GLXFBConfig) $ ptrToList fbcPtr (fromIntegral n)
+    where 
+        ptrToList :: Ptr a -> Int -> [Ptr a]
+        ptrToList ptr 0 = []
+        ptrToList ptr n = [ptr] ++ (ptrToList (plusPtr ptr (#size GLXFBConfig)) (n-1))
 foreign import ccall unsafe "glXChooseFBConfig"
-    cglXChooseFBConfig :: Display -> ScreenNumber -> Ptr Int32 -> Ptr CInt -> IO GLXFBConfig
+    cglXChooseFBConfig :: Display -> ScreenNumber -> Ptr Int32 -> Ptr CInt -> IO (Ptr GLXFBConfig)
 
 glXGetFBConfigAttrib :: Display -> GLXFBConfig -> Attribute -> IO (Maybe CInt)
 glXGetFBConfigAttrib dpy fbc attr =
