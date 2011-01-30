@@ -8,7 +8,8 @@ homepage:               <insert github URL>
 category:	        Graphics
 synopsis:	        A binding to GLX
 exposed-modules:
-    Graphics.X11.GLX
+    Graphics.X11.GLX,
+    Graphics.X11.GLX.Extensions
 extensions:	        ForeignFunctionInterface, CPP
 extra-libraries:        "GL"
 build-depends:	        base >= 3 && < 5, X11, OpenGLRaw

@@ -89,10 +89,14 @@ module Graphics.X11.GLX
     , visual
     , depth
     , visualId
+    , withAttrList
     ) where
 
+-- TODO
+-- - make sure everything is using Maybe instead of null pointers
+-- - find a way to reduce duplication of code
+
 #include "GL/glx.h"
-#include "X11/Xutil.h"
 
 import Data.Maybe
 import Foreign.C.Types
@@ -127,6 +131,20 @@ glXWindow = 0x8022
 
 glXPBuffer :: GLXDrawType
 glXPBuffer = 0x8023
+
+type ClientStringName = CInt
+glxClientVendor :: ClientStringName
+glxClientVendor = (#const GLX_VENDOR)
+glxClientVersion :: ClientStringName
+glxClientVersion = (#const GLX_VERSION)
+glxClientExtensions :: ClientStringName
+glxClientExtensions = (#const GLX_EXTENSIONS)
+
+type RenderType = CInt
+glxRgbaType :: RenderType
+glxRgbaType = (#const GLX_RGBA_TYPE)
+glxColorIndexType :: RenderType
+glxColorIndexType = (#const GLX_COLOR_INDEX_TYPE)
 
 type Attribute = Int32
 attrBufferSize      :: Attribute
@@ -176,8 +194,8 @@ foreign import ccall unsafe "glXChooseVisual"
     cglXChooseVisual :: Display -> ScreenNumber -> Ptr Int32 -> IO XVisualInfo
 
 glXCreateContext :: Display -> XVisualInfo -> Maybe GLXContext -> Bool -> IO (Maybe GLXContext)
-glXCreateContext dpy xvi ctx direct = do
-    ctx@(GLXContext ctxPtr) <- cglXCreateContext dpy xvi (fromMaybe (GLXContext nullPtr) ctx) direct
+glXCreateContext dpy xvi share direct = do
+    ctx@(GLXContext ctxPtr) <- cglXCreateContext dpy xvi (fromMaybe (GLXContext nullPtr) share) direct
     if ctxPtr == nullPtr
         then return Nothing
         else return (Just ctx)
@@ -222,8 +240,14 @@ foreign import ccall unsafe "glXIsDirect"
 foreign import ccall unsafe "glXGetConfig"
     glXGetConfig :: Display -> XVisualInfo -> CInt -> Ptr CInt -> IO CInt
 
+glXGetCurrentContext :: IO (Maybe GLXContext)
+glXGetCurrentContext = do
+    ctx@(GLXContext ctxPtr) <- cglXGetCurrentContext
+    if ctxPtr == nullPtr
+        then return Nothing
+        else return (Just ctx)
 foreign import ccall unsafe "glXGetCurrentContext"
-    glXGetCurrentContext :: IO GLXContext
+    cglXGetCurrentContext :: IO GLXContext
 
 foreign import ccall unsafe "glXGetCurrentDrawable"
     glXGetCurrentDrawable :: IO GLXDrawable
@@ -250,16 +274,18 @@ foreign import ccall unsafe "glXQueryExtensionsString"
 glXQueryServerString :: Display -> ScreenNumber -> IO String
 glXQueryServerString dpy screen = do
     css    <- cglXQueryServerString dpy screen
-    peekCString css
+    if css == nullPtr
+        then return ""
+        else peekCString css
 foreign import ccall unsafe "glXQueryServerString"
     cglXQueryServerString :: Display -> ScreenNumber -> IO (Ptr CChar)
 
-glXGetClientString :: Display -> ScreenNumber -> IO String
+glXGetClientString :: Display -> ClientStringName -> IO String
 glXGetClientString dpy screen = do
     css    <- cglXGetClientString dpy screen
     peekCString css
 foreign import ccall unsafe "glXGetClientString"
-    cglXGetClientString :: Display -> ScreenNumber -> IO (Ptr CChar)
+    cglXGetClientString :: Display -> ClientStringName -> IO (Ptr CChar)
 
 
 -- GLX 1.2 and later
@@ -268,20 +294,38 @@ foreign import ccall unsafe "glXGetCurrentDisplay"
 
 
 -- GLX 1.3 and later
-glXChooseFBConfig :: Display -> ScreenNumber -> [Attribute] -> IO GLXFBConfig
-glXChooseFBConfig dpy screen attrs =
-    alloca $ \n -> withAttrList attrs $ \attrlist -> cglXChooseFBConfig dpy screen attrlist n
+glXChooseFBConfig :: Display -> ScreenNumber -> [Attribute] -> IO (Maybe GLXFBConfig)
+glXChooseFBConfig dpy screen attrs = do
+    fbc@(GLXFBConfig fbcPtr) <- alloca $ \n -> 
+                                withAttrList attrs $ \attrlist -> 
+                                cglXChooseFBConfig dpy screen attrlist n
+    if fbcPtr == nullPtr
+        then return Nothing
+        else return (Just fbc)
 foreign import ccall unsafe "glXChooseFBConfig"
     cglXChooseFBConfig :: Display -> ScreenNumber -> Ptr Int32 -> Ptr CInt -> IO GLXFBConfig
 
+glXGetFBConfigAttrib :: Display -> GLXFBConfig -> Attribute -> IO (Maybe CInt)
+glXGetFBConfigAttrib dpy fbc attr =
+    alloca $ \n -> do
+        status <- cglXGetFBConfigAttrib dpy fbc attr n
+        if status == 0
+            then do val <- peek n; return (Just val)
+            else return Nothing
 foreign import ccall unsafe "glXGetFBConfigAttrib"
-    glXGetFBConfigAttrib :: Display -> GLXFBConfig -> CInt -> Ptr CInt -> IO CInt 
+    cglXGetFBConfigAttrib :: Display -> GLXFBConfig -> Int32 -> Ptr CInt -> IO CInt 
 
 foreign import ccall unsafe "glXGetFBConfigs"
     glXGetFBConfigs :: Display -> ScreenNumber -> Ptr CInt -> IO GLXFBConfig
 
+glXGetVisualFromFBConfig :: Display -> GLXFBConfig -> IO (Maybe XVisualInfo)
+glXGetVisualFromFBConfig dpy fbc = do
+    xvi@(XVisualInfo xviPtr) <- cglXGetVisualFromFBConfig dpy fbc
+    if xviPtr == nullPtr
+        then return Nothing
+        else return (Just xvi)
 foreign import ccall unsafe "glXGetVisualFromFBConfig"
-    glXGetVisualFromFBConfig :: Display -> GLXFBConfig -> IO XVisualInfo
+    cglXGetVisualFromFBConfig :: Display -> GLXFBConfig -> IO XVisualInfo
 
 glXCreateWindow :: Display -> GLXFBConfig -> Window -> [Attribute] -> IO GLXWindow
 glXCreateWindow dpy fbconfig win attrs =
@@ -313,8 +357,14 @@ foreign import ccall unsafe "glXDestroyPbuffer"
 foreign import ccall unsafe "glXQueryDrawable"
     glXQueryDrawable :: Display -> GLXDrawable -> CInt -> Ptr CUInt -> IO ()
 
+glXCreateNewContext :: Display -> GLXFBConfig -> RenderType -> Maybe GLXContext -> Bool -> IO (Maybe GLXContext)
+glXCreateNewContext dpy fbc render share direct = do
+    ctx@(GLXContext ctxPtr) <- cglXCreateNewContext dpy fbc render (fromMaybe (GLXContext nullPtr) share) direct
+    if ctxPtr == nullPtr
+        then return Nothing
+        else return (Just ctx)
 foreign import ccall unsafe "glXCreateNewContext"
-    glXCreateNewContext :: Display -> GLXFBConfig -> CInt -> GLXContext -> Bool -> IO GLXContext
+    cglXCreateNewContext :: Display -> GLXFBConfig -> RenderType -> GLXContext -> Bool -> IO GLXContext
 
 foreign import ccall unsafe "glXMakeContextCurrent"
     glXMakeContextCurrent :: Display -> GLXDrawable -> GLXDrawable -> GLXContext -> IO Bool
@@ -333,22 +383,9 @@ foreign import ccall unsafe "glXGetSelectedEvent"
 
 
 
--- texture from pixmap
--- TODO: move elsewhere with other extensions?
-
---glXBindTexImageEXT :: Display -> GLXDrawable -> CInt -> [Attribute] -> IO ()
---glXBindTexImageEXT dpy drawable buffer attrs = 
---    withAttrList attrs $ cglXBindTexImageEXT dpy drawable buffer 
---foreign import ccall unsafe "glXBindTexImageEXT"
---    cglXBindTexImageEXT :: Display -> GLXDrawable -> CInt -> Ptr Int32 -> IO ()
-
---foreign import ccall unsafe "glXReleaseTexImageEXT"
---    glXReleaseTexImageEXT :: Display -> GLXDrawable -> CInt -> IO ()
-
-
-
 -- helper functions
 
+-- TODO: name and organize these properly
 visual :: XVisualInfo -> Visual
 visual (XVisualInfo xvi) = Visual ((#ptr XVisualInfo, visual) xvi)
 
