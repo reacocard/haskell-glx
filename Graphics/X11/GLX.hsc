@@ -14,6 +14,15 @@ module Graphics.X11.GLX
     , glXWindow
     , glXPBuffer
 
+    , ClientStringName
+    , glxClientVendor
+    , glxClientVersion
+    , glxClientExtensions
+
+    , RenderType
+    , glxRgbaType
+    , glxColorIndexType
+
     , Attribute
     , attrBufferSize    
     , attrLevel         
