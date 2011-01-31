@@ -7,39 +7,41 @@ module Graphics.X11.GLX
     , GLXPbuffer
 
     , GLXEventType
-    , glXDamaged
-    , glXSaved
+    , glxDamaged
+    , glxSaved
 
     , GLXDrawType
-    , glXWindow
-    , glXPBuffer
+    , glxWindow
+    , glxPBuffer
 
-    , ClientStringName
+    , GLXClientStringName
     , glxClientVendor
     , glxClientVersion
     , glxClientExtensions
 
-    , RenderType
+    , GLXRenderType
     , glxRgbaType
     , glxColorIndexType
 
-    , Attribute
-    , attrBufferSize    
-    , attrLevel         
-    , attrRGBA          
-    , attrDoubleBuffer  
-    , attrStereo        
-    , attrAuxBuffers    
-    , attrRedSize       
-    , attrGreenSize     
-    , attrBlueSize      
-    , attrAlphaSize     
-    , attrDepthSize     
-    , attrStencilSize   
-    , attrAccumRedSize  
-    , attrAccumGreenSize
-    , attrAccumBlueSize 
-    , attrAccumAlphaSize
+    , GLXAttribute
+    , glxUseGL
+    , glxBufferSize    
+    , glxLevel         
+    , glxRGBA          
+    , glxDoubleBuffer  
+    , glxStereo        
+    , glxAuxBuffers    
+    , glxRedSize       
+    , glxGreenSize     
+    , glxBlueSize      
+    , glxAlphaSize     
+    , glxDepthSize     
+    , glxStencilSize   
+    , glxAccumRedSize  
+    , glxAccumGreenSize
+    , glxAccumBlueSize 
+    , glxAccumAlphaSize
+    , glxVisualId
 
     , XVisualInfo
     , GLXContext(..)
@@ -95,11 +97,21 @@ module Graphics.X11.GLX
 --    , glXReleaseTexImageEXT
 
     -- misc
-    , visual
-    , depth
-    , visualId
+    , xviVisualId
     , withAttrList
     ) where
+
+
+-- NAMING CONVENTIONS: 
+-- types begin with GLX
+-- instances begin with glx
+-- functions begin with glX
+-- the remainder of each name is the same as the C function, 
+-- but with camelcase instead of underscores. 
+-- e.g. GLX_BUFFER_SIZE becomes GLXBufferSize
+--
+-- functions and data that do not have a direct C correspondent do not begin with glx.
+
 
 -- TODO
 -- - make sure everything is using Maybe instead of null pointers
@@ -127,73 +139,77 @@ type GLXPbuffer     = XID
 
 type GLXEventType = CInt
 
-glXDamaged :: GLXEventType
-glXDamaged = 0x8020
+glxDamaged :: GLXEventType
+glxDamaged = 0x8020
 
-glXSaved :: GLXEventType
-glXSaved = 0x8021
+glxSaved :: GLXEventType
+glxSaved = 0x8021
 
 type GLXDrawType = CInt
 
-glXWindow :: GLXDrawType
-glXWindow = 0x8022
+glxWindow :: GLXDrawType
+glxWindow = 0x8022
 
-glXPBuffer :: GLXDrawType
-glXPBuffer = 0x8023
+glxPBuffer :: GLXDrawType
+glxPBuffer = 0x8023
 
-type ClientStringName = CInt
-glxClientVendor :: ClientStringName
+type GLXClientStringName = CInt
+glxClientVendor :: GLXClientStringName
 glxClientVendor = (#const GLX_VENDOR)
-glxClientVersion :: ClientStringName
+glxClientVersion :: GLXClientStringName
 glxClientVersion = (#const GLX_VERSION)
-glxClientExtensions :: ClientStringName
+glxClientExtensions :: GLXClientStringName
 glxClientExtensions = (#const GLX_EXTENSIONS)
 
-type RenderType = CInt
-glxRgbaType :: RenderType
+type GLXRenderType = CInt
+glxRgbaType :: GLXRenderType
 glxRgbaType = (#const GLX_RGBA_TYPE)
-glxColorIndexType :: RenderType
+glxColorIndexType :: GLXRenderType
 glxColorIndexType = (#const GLX_COLOR_INDEX_TYPE)
 
-type Attribute = Int32
-attrBufferSize      :: Attribute
-attrBufferSize      = (#const GLX_BUFFER_SIZE)      :: Int32
-attrLevel           :: Attribute
-attrLevel           = (#const GLX_LEVEL)            :: Int32
-attrRGBA            :: Attribute
-attrRGBA            = (#const GLX_RGBA)             :: Int32
-attrDoubleBuffer    :: Attribute
-attrDoubleBuffer    = (#const GLX_DOUBLEBUFFER)     :: Int32
-attrStereo          :: Attribute
-attrStereo          = (#const GLX_STEREO)           :: Int32
-attrAuxBuffers      :: Attribute
-attrAuxBuffers      = (#const GLX_AUX_BUFFERS)      :: Int32
-attrRedSize         :: Attribute
-attrRedSize         = (#const GLX_RED_SIZE)         :: Int32
-attrGreenSize       :: Attribute
-attrGreenSize       = (#const GLX_GREEN_SIZE)       :: Int32
-attrBlueSize        :: Attribute
-attrBlueSize        = (#const GLX_BLUE_SIZE)        :: Int32
-attrAlphaSize       :: Attribute
-attrAlphaSize       = (#const GLX_ALPHA_SIZE)       :: Int32
-attrDepthSize       :: Attribute
-attrDepthSize       = (#const GLX_DEPTH_SIZE)       :: Int32
-attrStencilSize     :: Attribute
-attrStencilSize     = (#const GLX_STENCIL_SIZE)     :: Int32
-attrAccumRedSize    :: Attribute
-attrAccumRedSize    = (#const GLX_ACCUM_RED_SIZE)   :: Int32
-attrAccumGreenSize  :: Attribute
-attrAccumGreenSize  = (#const GLX_ACCUM_GREEN_SIZE) :: Int32
-attrAccumBlueSize   :: Attribute
-attrAccumBlueSize   = (#const GLX_ACCUM_BLUE_SIZE)  :: Int32
-attrAccumAlphaSize  :: Attribute
-attrAccumAlphaSize  = (#const GLX_ACCUM_ALPHA_SIZE) :: Int32
+type GLXAttribute = Int32
+glxUseGL           :: GLXAttribute
+glxUseGL           = (#const GLX_USE_GL)
+glxBufferSize      :: GLXAttribute
+glxBufferSize      = (#const GLX_BUFFER_SIZE)
+glxLevel           :: GLXAttribute
+glxLevel           = (#const GLX_LEVEL)
+glxRGBA            :: GLXAttribute
+glxRGBA            = (#const GLX_RGBA)
+glxDoubleBuffer    :: GLXAttribute
+glxDoubleBuffer    = (#const GLX_DOUBLEBUFFER)
+glxStereo          :: GLXAttribute
+glxStereo          = (#const GLX_STEREO)
+glxAuxBuffers      :: GLXAttribute
+glxAuxBuffers      = (#const GLX_AUX_BUFFERS)
+glxRedSize         :: GLXAttribute
+glxRedSize         = (#const GLX_RED_SIZE)
+glxGreenSize       :: GLXAttribute
+glxGreenSize       = (#const GLX_GREEN_SIZE)
+glxBlueSize        :: GLXAttribute
+glxBlueSize        = (#const GLX_BLUE_SIZE)
+glxAlphaSize       :: GLXAttribute
+glxAlphaSize       = (#const GLX_ALPHA_SIZE)
+glxDepthSize       :: GLXAttribute
+glxDepthSize       = (#const GLX_DEPTH_SIZE)
+glxStencilSize     :: GLXAttribute
+glxStencilSize     = (#const GLX_STENCIL_SIZE)
+glxAccumRedSize    :: GLXAttribute
+glxAccumRedSize    = (#const GLX_ACCUM_RED_SIZE)
+glxAccumGreenSize  :: GLXAttribute
+glxAccumGreenSize  = (#const GLX_ACCUM_GREEN_SIZE)
+glxAccumBlueSize   :: GLXAttribute
+glxAccumBlueSize   = (#const GLX_ACCUM_BLUE_SIZE)
+glxAccumAlphaSize  :: GLXAttribute
+glxAccumAlphaSize  = (#const GLX_ACCUM_ALPHA_SIZE)
+glxVisualId        :: GLXAttribute
+glxVisualId        = (#const GLX_VISUAL_ID)
 
-newtype XVisualInfo = XVisualInfo (Ptr XVisualInfo)
+newtype XVisualInfo = XVisualInfo (Ptr XVisualInfo) deriving (Eq)
 newtype GLXContext = GLXContext (Ptr GLXContext)
 newtype GLXFBConfig = GLXFBConfig (Ptr GLXFBConfig)
 
-glXChooseVisual :: Display -> ScreenNumber -> [Attribute] -> IO (Maybe XVisualInfo)
+glXChooseVisual :: Display -> ScreenNumber -> [GLXAttribute] -> IO (Maybe XVisualInfo)
 glXChooseVisual dpy screen attrs = do
     xvi@(XVisualInfo xviPtr) <- withAttrList attrs $ cglXChooseVisual dpy screen
     if xviPtr == nullPtr
@@ -289,12 +305,12 @@ glXQueryServerString dpy screen = do
 foreign import ccall unsafe "glXQueryServerString"
     cglXQueryServerString :: Display -> ScreenNumber -> IO (Ptr CChar)
 
-glXGetClientString :: Display -> ClientStringName -> IO String
+glXGetClientString :: Display -> GLXClientStringName -> IO String
 glXGetClientString dpy screen = do
     css    <- cglXGetClientString dpy screen
     peekCString css
 foreign import ccall unsafe "glXGetClientString"
-    cglXGetClientString :: Display -> ClientStringName -> IO (Ptr CChar)
+    cglXGetClientString :: Display -> GLXClientStringName -> IO (Ptr CChar)
 
 
 -- GLX 1.2 and later
@@ -304,9 +320,7 @@ foreign import ccall unsafe "glXGetCurrentDisplay"
 
 -- GLX 1.3 and later
 
--- This is VERY MUCH WRONG - needs to return a list of GLXFBConfig to match the C api,
--- but Storable is being bitchy...
-glXChooseFBConfig :: Display -> ScreenNumber -> [Attribute] -> IO [GLXFBConfig]
+glXChooseFBConfig :: Display -> ScreenNumber -> [GLXAttribute] -> IO [GLXFBConfig]
 glXChooseFBConfig dpy screen attrs =
     alloca $ \n -> 
         withAttrList attrs $ \attrlist -> do
@@ -320,7 +334,7 @@ glXChooseFBConfig dpy screen attrs =
 foreign import ccall unsafe "glXChooseFBConfig"
     cglXChooseFBConfig :: Display -> ScreenNumber -> Ptr Int32 -> Ptr CInt -> IO (Ptr GLXFBConfig)
 
-glXGetFBConfigAttrib :: Display -> GLXFBConfig -> Attribute -> IO (Maybe CInt)
+glXGetFBConfigAttrib :: Display -> GLXFBConfig -> GLXAttribute -> IO (Maybe CInt)
 glXGetFBConfigAttrib dpy fbc attr =
     alloca $ \n -> do
         status <- cglXGetFBConfigAttrib dpy fbc attr n
@@ -330,8 +344,18 @@ glXGetFBConfigAttrib dpy fbc attr =
 foreign import ccall unsafe "glXGetFBConfigAttrib"
     cglXGetFBConfigAttrib :: Display -> GLXFBConfig -> Int32 -> Ptr CInt -> IO CInt 
 
+glXGetFBConfigs :: Display -> ScreenNumber -> IO [GLXFBConfig]
+glXGetFBConfigs dpy screen =
+    alloca $ \n -> do
+        fbcPtr <- cglXGetFBConfigs dpy screen n
+        n <- peek n
+        return $ map (GLXFBConfig) $ ptrToList fbcPtr (fromIntegral n)
+    where 
+        ptrToList :: Ptr a -> Int -> [Ptr a]
+        ptrToList ptr 0 = []
+        ptrToList ptr n = [ptr] ++ (ptrToList (plusPtr ptr (#size GLXFBConfig)) (n-1))
 foreign import ccall unsafe "glXGetFBConfigs"
-    glXGetFBConfigs :: Display -> ScreenNumber -> Ptr CInt -> IO GLXFBConfig
+    cglXGetFBConfigs :: Display -> ScreenNumber -> Ptr CInt -> IO (Ptr GLXFBConfig)
 
 glXGetVisualFromFBConfig :: Display -> GLXFBConfig -> IO (Maybe XVisualInfo)
 glXGetVisualFromFBConfig dpy fbc = do
@@ -342,7 +366,7 @@ glXGetVisualFromFBConfig dpy fbc = do
 foreign import ccall unsafe "glXGetVisualFromFBConfig"
     cglXGetVisualFromFBConfig :: Display -> GLXFBConfig -> IO XVisualInfo
 
-glXCreateWindow :: Display -> GLXFBConfig -> Window -> [Attribute] -> IO GLXWindow
+glXCreateWindow :: Display -> GLXFBConfig -> Window -> [GLXAttribute] -> IO GLXWindow
 glXCreateWindow dpy fbconfig win attrs =
     withAttrList attrs $ cglXCreateWindow dpy fbconfig win
 foreign import ccall unsafe "glXCreateWindow"
@@ -351,7 +375,7 @@ foreign import ccall unsafe "glXCreateWindow"
 foreign import ccall unsafe "glXDestroyWindow"
     glXDestroyWindow :: Display -> GLXWindow -> IO ()
 
-glXCreatePixmap :: Display -> GLXFBConfig -> Pixmap -> [Attribute] -> IO GLXPixmap
+glXCreatePixmap :: Display -> GLXFBConfig -> Pixmap -> [GLXAttribute] -> IO GLXPixmap
 glXCreatePixmap dpy fbconfig pixmap attrs =
     withAttrList attrs $ cglXCreatePixmap dpy fbconfig pixmap
 foreign import ccall unsafe "glXCreatePixmap"
@@ -360,7 +384,7 @@ foreign import ccall unsafe "glXCreatePixmap"
 foreign import ccall unsafe "glXDestroyPixmap"
     glXDestroyPixmap :: Display -> GLXPixmap -> IO ()
 
-glXCreatePbuffer :: Display -> GLXFBConfig -> [Attribute] -> IO GLXPbuffer
+glXCreatePbuffer :: Display -> GLXFBConfig -> [GLXAttribute] -> IO GLXPbuffer
 glXCreatePbuffer dpy fbconfig attrs =
     withAttrList attrs $ cglXCreatePbuffer dpy fbconfig
 foreign import ccall unsafe "glXCreatePbuffer"
@@ -372,14 +396,14 @@ foreign import ccall unsafe "glXDestroyPbuffer"
 foreign import ccall unsafe "glXQueryDrawable"
     glXQueryDrawable :: Display -> GLXDrawable -> CInt -> Ptr CUInt -> IO ()
 
-glXCreateNewContext :: Display -> GLXFBConfig -> RenderType -> Maybe GLXContext -> Bool -> IO (Maybe GLXContext)
+glXCreateNewContext :: Display -> GLXFBConfig -> GLXRenderType -> Maybe GLXContext -> Bool -> IO (Maybe GLXContext)
 glXCreateNewContext dpy fbc render share direct = do
     ctx@(GLXContext ctxPtr) <- cglXCreateNewContext dpy fbc render (fromMaybe (GLXContext nullPtr) share) direct
     if ctxPtr == nullPtr
         then return Nothing
         else return (Just ctx)
 foreign import ccall unsafe "glXCreateNewContext"
-    cglXCreateNewContext :: Display -> GLXFBConfig -> RenderType -> GLXContext -> Bool -> IO GLXContext
+    cglXCreateNewContext :: Display -> GLXFBConfig -> GLXRenderType -> GLXContext -> Bool -> IO GLXContext
 
 foreign import ccall unsafe "glXMakeContextCurrent"
     glXMakeContextCurrent :: Display -> GLXDrawable -> GLXDrawable -> GLXContext -> IO Bool
@@ -400,17 +424,10 @@ foreign import ccall unsafe "glXGetSelectedEvent"
 
 -- helper functions
 
--- TODO: name and organize these properly
-visual :: XVisualInfo -> Visual
-visual (XVisualInfo xvi) = Visual ((#ptr XVisualInfo, visual) xvi)
+xviVisualId :: XVisualInfo -> IO VisualID
+xviVisualId (XVisualInfo xvi) = ((#peek XVisualInfo, visualid) xvi)
 
-depth :: XVisualInfo -> IO Int
-depth (XVisualInfo xvi) = (#peek XVisualInfo, depth) xvi
-
-visualId :: XVisualInfo -> IO VisualID
-visualId (XVisualInfo xvi) = ((#peek XVisualInfo, visualid) xvi)
-
-withAttrList :: [Attribute] -> (Ptr Int32 -> IO a) -> IO a
+withAttrList :: [GLXAttribute] -> (Ptr Int32 -> IO a) -> IO a
 withAttrList attrs f = withArray0 (#const None) attrs $ \attrlist -> f attrlist
 
 -- Borrowed from the Xdamage bindings
