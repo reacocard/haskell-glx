@@ -42,6 +42,13 @@ module Graphics.X11.GLX
     , glxAccumBlueSize 
     , glxAccumAlphaSize
     , glxVisualId
+    , glxConfigCaveat
+    , glxRenderType
+
+    , glxNone
+    , glxSlowConfig
+    
+    , glxRgbaBit
 
     , XVisualInfo
     , GLXContext(..)
@@ -116,6 +123,7 @@ module Graphics.X11.GLX
 -- TODO
 -- - make sure everything is using Maybe instead of null pointers
 -- - find a way to reduce duplication of code
+-- - pretty much EVERYTHING related to FBConfigs is broken, no idea why
 
 #include "GL/glx.h"
 
@@ -168,44 +176,61 @@ glxColorIndexType :: GLXRenderType
 glxColorIndexType = (#const GLX_COLOR_INDEX_TYPE)
 
 type GLXAttribute = Int32
-glxUseGL           :: GLXAttribute
-glxUseGL           = (#const GLX_USE_GL)
-glxBufferSize      :: GLXAttribute
-glxBufferSize      = (#const GLX_BUFFER_SIZE)
-glxLevel           :: GLXAttribute
-glxLevel           = (#const GLX_LEVEL)
-glxRGBA            :: GLXAttribute
-glxRGBA            = (#const GLX_RGBA)
-glxDoubleBuffer    :: GLXAttribute
-glxDoubleBuffer    = (#const GLX_DOUBLEBUFFER)
-glxStereo          :: GLXAttribute
-glxStereo          = (#const GLX_STEREO)
-glxAuxBuffers      :: GLXAttribute
-glxAuxBuffers      = (#const GLX_AUX_BUFFERS)
-glxRedSize         :: GLXAttribute
-glxRedSize         = (#const GLX_RED_SIZE)
-glxGreenSize       :: GLXAttribute
-glxGreenSize       = (#const GLX_GREEN_SIZE)
-glxBlueSize        :: GLXAttribute
-glxBlueSize        = (#const GLX_BLUE_SIZE)
-glxAlphaSize       :: GLXAttribute
-glxAlphaSize       = (#const GLX_ALPHA_SIZE)
-glxDepthSize       :: GLXAttribute
-glxDepthSize       = (#const GLX_DEPTH_SIZE)
-glxStencilSize     :: GLXAttribute
-glxStencilSize     = (#const GLX_STENCIL_SIZE)
-glxAccumRedSize    :: GLXAttribute
-glxAccumRedSize    = (#const GLX_ACCUM_RED_SIZE)
-glxAccumGreenSize  :: GLXAttribute
-glxAccumGreenSize  = (#const GLX_ACCUM_GREEN_SIZE)
-glxAccumBlueSize   :: GLXAttribute
-glxAccumBlueSize   = (#const GLX_ACCUM_BLUE_SIZE)
-glxAccumAlphaSize  :: GLXAttribute
-glxAccumAlphaSize  = (#const GLX_ACCUM_ALPHA_SIZE)
-glxVisualId        :: GLXAttribute
-glxVisualId        = (#const GLX_VISUAL_ID)
+-- attributes
+glxUseGL            :: GLXAttribute
+glxUseGL            = (#const GLX_USE_GL)
+glxBufferSize       :: GLXAttribute
+glxBufferSize       = (#const GLX_BUFFER_SIZE)
+glxLevel            :: GLXAttribute
+glxLevel            = (#const GLX_LEVEL)
+glxRGBA             :: GLXAttribute
+glxRGBA             = (#const GLX_RGBA)
+glxDoubleBuffer     :: GLXAttribute
+glxDoubleBuffer     = (#const GLX_DOUBLEBUFFER)
+glxStereo           :: GLXAttribute
+glxStereo           = (#const GLX_STEREO)
+glxAuxBuffers       :: GLXAttribute
+glxAuxBuffers       = (#const GLX_AUX_BUFFERS)
+glxRedSize          :: GLXAttribute
+glxRedSize          = (#const GLX_RED_SIZE)
+glxGreenSize        :: GLXAttribute
+glxGreenSize        = (#const GLX_GREEN_SIZE)
+glxBlueSize         :: GLXAttribute
+glxBlueSize         = (#const GLX_BLUE_SIZE)
+glxAlphaSize        :: GLXAttribute
+glxAlphaSize        = (#const GLX_ALPHA_SIZE)
+glxDepthSize        :: GLXAttribute
+glxDepthSize        = (#const GLX_DEPTH_SIZE)
+glxStencilSize      :: GLXAttribute
+glxStencilSize      = (#const GLX_STENCIL_SIZE)
+glxAccumRedSize     :: GLXAttribute
+glxAccumRedSize     = (#const GLX_ACCUM_RED_SIZE)
+glxAccumGreenSize   :: GLXAttribute
+glxAccumGreenSize   = (#const GLX_ACCUM_GREEN_SIZE)
+glxAccumBlueSize    :: GLXAttribute
+glxAccumBlueSize    = (#const GLX_ACCUM_BLUE_SIZE)
+glxAccumAlphaSize   :: GLXAttribute
+glxAccumAlphaSize   = (#const GLX_ACCUM_ALPHA_SIZE)
+glxVisualId         :: GLXAttribute
+glxVisualId         = (#const GLX_VISUAL_ID)
+glxConfigCaveat     :: GLXAttribute
+glxConfigCaveat     = (#const GLX_CONFIG_CAVEAT)
+glxRenderType       :: GLXAttribute
+glxRenderType       = (#const GLX_RENDER_TYPE)
 
-newtype XVisualInfo = XVisualInfo (Ptr XVisualInfo) deriving (Eq)
+-- glxConfigCaveat values
+glxNone             :: GLXAttribute
+glxNone             = (#const GLX_NONE)
+glxSlowConfig       :: GLXAttribute
+glxSlowConfig       = (#const GLX_SLOW_CONFIG)
+
+-- glxRenderType values
+glxRgbaBit          :: GLXAttribute
+glxRgbaBit          = (#const GLX_RGBA_BIT)
+
+
+
+newtype XVisualInfo = XVisualInfo (Ptr XVisualInfo)
 newtype GLXContext = GLXContext (Ptr GLXContext)
 newtype GLXFBConfig = GLXFBConfig (Ptr GLXFBConfig)
 
@@ -347,7 +372,7 @@ foreign import ccall unsafe "glXGetFBConfigAttrib"
 glXGetFBConfigs :: Display -> ScreenNumber -> IO [GLXFBConfig]
 glXGetFBConfigs dpy screen =
     alloca $ \n -> do
-        fbcPtr <- cglXGetFBConfigs dpy screen n
+        fbc@(GLXFBConfig fbcPtr) <- cglXGetFBConfigs dpy screen n
         n <- peek n
         return $ map (GLXFBConfig) $ ptrToList fbcPtr (fromIntegral n)
     where 
@@ -355,7 +380,7 @@ glXGetFBConfigs dpy screen =
         ptrToList ptr 0 = []
         ptrToList ptr n = [ptr] ++ (ptrToList (plusPtr ptr (#size GLXFBConfig)) (n-1))
 foreign import ccall unsafe "glXGetFBConfigs"
-    cglXGetFBConfigs :: Display -> ScreenNumber -> Ptr CInt -> IO (Ptr GLXFBConfig)
+    cglXGetFBConfigs :: Display -> ScreenNumber -> Ptr CInt -> IO GLXFBConfig
 
 glXGetVisualFromFBConfig :: Display -> GLXFBConfig -> IO (Maybe XVisualInfo)
 glXGetVisualFromFBConfig dpy fbc = do
@@ -426,6 +451,9 @@ foreign import ccall unsafe "glXGetSelectedEvent"
 
 xviVisualId :: XVisualInfo -> IO VisualID
 xviVisualId (XVisualInfo xvi) = ((#peek XVisualInfo, visualid) xvi)
+
+xviDepth :: XVisualInfo -> IO CInt
+xviDepth (XVisualInfo xvi) = ((#peek XVisualInfo, depth) xvi)
 
 withAttrList :: [GLXAttribute] -> (Ptr Int32 -> IO a) -> IO a
 withAttrList attrs f = withArray0 (#const None) attrs $ \attrlist -> f attrlist
