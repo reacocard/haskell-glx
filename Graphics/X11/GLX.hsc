@@ -105,6 +105,8 @@ module Graphics.X11.GLX
 
     -- misc
     , xviVisualId
+    , xviVisual
+    , xviDepth
     , withAttrList
     ) where
 
@@ -230,7 +232,7 @@ glxRgbaBit          = (#const GLX_RGBA_BIT)
 
 
 
-newtype XVisualInfo = XVisualInfo (Ptr XVisualInfo)
+newtype XVisualInfo = XVisualInfo (Ptr XVisualInfo) -- this should probably be in X11...
 newtype GLXContext = GLXContext (Ptr GLXContext)
 newtype GLXFBConfig = GLXFBConfig (Ptr GLXFBConfig)
 
@@ -448,6 +450,9 @@ foreign import ccall unsafe "glXGetSelectedEvent"
 
 
 -- helper functions
+
+xviVisual :: XVisualInfo -> Visual
+xviVisual (XVisualInfo xvi) = Visual ((#ptr XVisualInfo, visual) xvi)
 
 xviVisualId :: XVisualInfo -> IO VisualID
 xviVisualId (XVisualInfo xvi) = ((#peek XVisualInfo, visualid) xvi)
